@@ -100,9 +100,18 @@ public class ElasticSearchConsumer {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-
-
             }
+
+            logger.info("commiting offsert ");
+            consumer.commitSync();
+            logger.info("offsets have been commited ");
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
 
         }
 
@@ -127,6 +136,9 @@ public class ElasticSearchConsumer {
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, group_id);
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,"earliest");
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG,"false"); //disable auto commit of records
+        properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG,"10"); //only pulls 10 recordss
+
 
         //create consumer
         KafkaConsumer<String,String> consumer = new KafkaConsumer<String, String>(properties);
