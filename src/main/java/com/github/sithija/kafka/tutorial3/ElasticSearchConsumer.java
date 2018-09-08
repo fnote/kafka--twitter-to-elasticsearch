@@ -93,14 +93,23 @@ public class ElasticSearchConsumer {
 //                String id = record.topic()+ "_" + record.partition() +"_" + record.offset();
               //where we insert data to elastic search
 
-                //twitter feed specific id handling idempotence data delivery semantics
-                String id = extractIdFromTweet(record.value());
 
-                //creating an index request,this takes 3 arguments index,type and id ,id not necesasary here
-                IndexRequest request = new IndexRequest("twitter","tweets",id)
-                        .source(record.value(), XContentType.JSON);
+                try{
 
-                bulkRequest.add(request); //here we add to pur bulk request
+                    //twitter feed specific id handling idempotence data delivery semantics
+                    String id = extractIdFromTweet(record.value());
+
+                    //creating an index request,this takes 3 arguments index,type and id ,id not necesasary here
+                    IndexRequest request = new IndexRequest("twitter","tweets",id)
+                            .source(record.value(), XContentType.JSON);
+
+                    bulkRequest.add(request); //here we add to pur bulk request
+
+                }catch (NullPointerException e){
+                    logger.warn("skipping bad data"+ record.value());
+                }
+
+
 
                 //get the id of the response,this is not necessary just for testing get id use id to see its in cluster
 //                IndexResponse indexResponse= client.index(request, RequestOptions.DEFAULT);
