@@ -13,6 +13,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -74,9 +76,18 @@ public class ElasticSearchConsumer {
 
 
         while(true){
+
+
+            BulkRequest bulkRequest=new BulkRequest();
+
             ConsumerRecords<String, String> records =  consumer.poll(Duration.ofMillis(100));
 
+
+            Integer recordCount= records.count();
+
             for(ConsumerRecord record:records){
+
+
 
                 //kafka generic id
 //                String id = record.topic()+ "_" + record.partition() +"_" + record.offset();
@@ -89,30 +100,36 @@ public class ElasticSearchConsumer {
                 IndexRequest request = new IndexRequest("twitter","tweets",id)
                         .source(record.value(), XContentType.JSON);
 
-                //get the id of the response,this is not necessary just for testing get id use id to see its in cluster
-                IndexResponse indexResponse= client.index(request, RequestOptions.DEFAULT);
-//                String id = indexResponse.getId();
-                logger.info(indexResponse.getId());
+                bulkRequest.add(request); //here we add to pur bulk request
 
+                //get the id of the response,this is not necessary just for testing get id use id to see its in cluster
+//                IndexResponse indexResponse= client.index(request, RequestOptions.DEFAULT);
+////                String id = indexResponse.getId();
+//                logger.info(indexResponse.getId());
+//
+//
+//                try {
+//                    Thread.sleep(1000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+            }
+
+            if (recordCount>0) {
+                //only if there are records only ...10 records added at once
+                BulkResponse bulkItemResponses = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+
+                logger.info("commiting offsert ");
+                consumer.commitSync();
+                logger.info("offsets have been commited ");
 
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+
             }
-
-            logger.info("commiting offsert ");
-            consumer.commitSync();
-            logger.info("offsets have been commited ");
-
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-
         }
 
 
