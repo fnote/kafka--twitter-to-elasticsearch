@@ -1,6 +1,7 @@
 package com.github.sithija.kafka.tutorial3;
 
 import com.github.sithija.kafka.tutorial1.ConsumerDemoGroups;
+import com.google.gson.JsonParser;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -76,16 +77,22 @@ public class ElasticSearchConsumer {
             ConsumerRecords<String, String> records =  consumer.poll(Duration.ofMillis(100));
 
             for(ConsumerRecord record:records){
+
+                //kafka generic id
+//                String id = record.topic()+ "_" + record.partition() +"_" + record.offset();
               //where we insert data to elastic search
 
+                //twitter feed specific id handling idempotence data delivery semantics
+                String id = extractIdFromTweet(record.value());
+
                 //creating an index request,this takes 3 arguments index,type and id ,id not necesasary here
-                IndexRequest request = new IndexRequest("twitter","tweets")
+                IndexRequest request = new IndexRequest("twitter","tweets",id)
                         .source(record.value(), XContentType.JSON);
 
                 //get the id of the response,this is not necessary just for testing get id use id to see its in cluster
                 IndexResponse indexResponse= client.index(request, RequestOptions.DEFAULT);
-                String id = indexResponse.getId();
-                logger.info(id);
+//                String id = indexResponse.getId();
+                logger.info(indexResponse.getId());
 
 
                 try {
@@ -127,6 +134,18 @@ public class ElasticSearchConsumer {
         consumer.subscribe(Arrays.asList(topic));
 
         return consumer;
+
+    }
+
+    private static JsonParser jsonParser =new JsonParser();
+
+    private static String extractIdFromTweet(String tweetJson){
+        //can use gson library
+
+        return jsonParser.parse(tweetJson)
+                .getAsJsonObject()
+                .get("id_str")
+                .getAsString();
 
     }
 
